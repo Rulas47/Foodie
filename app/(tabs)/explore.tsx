@@ -1,8 +1,7 @@
 import { StyleSheet, Dimensions } from 'react-native';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { ThemedView } from '@/components/ThemedView';
-
-const GOOGLE_MAPS_API_KEY = 'AIzaSyCUotSSvr4PyrHMeUS0v40gCBtqQmnmrmU';
+import Constants from 'expo-constants';
 
 export default function TabTwoScreen() {
   return (
