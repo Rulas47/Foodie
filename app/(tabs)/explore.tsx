@@ -2,10 +2,35 @@ import { StyleSheet, Dimensions, TextInput, View, TouchableOpacity, Text } from 
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { ThemedView } from '@/components/ThemedView';
 import Constants from 'expo-constants';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import * as Location from 'expo-location';
 
 export default function TabTwoScreen() {
   const [activeView, setActiveView] = useState('map');
+  const [location, setLocation] = useState({
+    latitude: 40.416775,
+    longitude: -3.703790,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Permission to access location was denied');
+        return;
+      }
+
+      let currentLocation = await Location.getCurrentPositionAsync({});
+      setLocation({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+    })();
+  }, []);
 
   return (
     <ThemedView style={styles.container}>
@@ -32,16 +57,17 @@ export default function TabTwoScreen() {
           </TouchableOpacity>
         </View>
       </View>
-      <MapView
-        provider={PROVIDER_GOOGLE}
-        style={styles.map}
-        initialRegion={{
-          latitude: 40.416775,  // Madrid, España
-          longitude: -3.703790,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
-      />
+      {activeView === 'map' ? (
+        <MapView
+          provider={PROVIDER_GOOGLE}
+          style={styles.map}
+          initialRegion={location}
+        />
+      ) : (
+        <View style={styles.listView}>
+          <Text style={styles.listText}>Explorar por lista</Text>
+        </View>
+      )}
     </ThemedView>
   );
 }
@@ -104,5 +130,15 @@ const styles = StyleSheet.create({
   map: {
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
+  },
+  listView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+  },
+  listText: {
+    fontSize: 20,
+    color: '#666',
   },
 }); 
