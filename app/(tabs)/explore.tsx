@@ -1,5 +1,5 @@
 import { StyleSheet, Dimensions, TextInput, View, TouchableOpacity } from 'react-native';
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import Constants from 'expo-constants';
@@ -7,6 +7,14 @@ import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+
+interface Restaurant {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  rating?: number;
+}
 
 export default function TabTwoScreen() {
   const [activeView, setActiveView] = useState('map');
@@ -16,6 +24,7 @@ export default function TabTwoScreen() {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const colorScheme = useColorScheme() ?? 'light';
 
   useEffect(() => {
@@ -33,8 +42,34 @@ export default function TabTwoScreen() {
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       });
+      
+      // Buscar restaurantes cercanos
+      await fetchNearbyRestaurants(currentLocation.coords.latitude, currentLocation.coords.longitude);
     })();
   }, []);
+
+  const fetchNearbyRestaurants = async (lat: number, lng: number) => {
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=1500&type=restaurant&key=AIzaSyCUotSSvr4PyrHMeUS0v40gCBtqQmnmrmU`
+      );
+      const data = await response.json();
+      
+      if (data.results) {
+        const restaurantsData = data.results.map((place: any) => ({
+          id: place.place_id,
+          name: place.name,
+          latitude: place.geometry.location.lat,
+          longitude: place.geometry.location.lng,
+          rating: place.rating
+        }));
+        console.log('Restaurantes encontrados:', restaurantsData.length);
+        setRestaurants(restaurantsData);
+      }
+    } catch (error) {
+      console.error('Error fetching restaurants:', error);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -85,7 +120,43 @@ export default function TabTwoScreen() {
           initialRegion={location}
           showsUserLocation={true}
           showsMyLocationButton={true}
-        />
+          showsPointsOfInterest={false}
+          showsBuildings={false}
+          showsTraffic={false}
+          showsIndoors={false}
+          showsCompass={false}
+          showsScale={false}
+          customMapStyle={[
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }]
+            },
+            {
+              featureType: "poi",
+              elementType: "geometry",
+              stylers: [{ visibility: "off" }]
+            },
+            {
+              featureType: "poi.business",
+              elementType: "all",
+              stylers: [{ visibility: "on" }]
+            }
+          ]}
+        >
+          {restaurants.map((restaurant) => (
+            <Marker
+              key={restaurant.id}
+              coordinate={{
+                latitude: restaurant.latitude,
+                longitude: restaurant.longitude,
+              }}
+              title={restaurant.name}
+              description={`Rating: ${restaurant.rating || 'No disponible'}`}
+              pinColor="#FF0000"
+            />
+          ))}
+        </MapView>
       ) : (
         <View style={[styles.listView, { backgroundColor: Colors[colorScheme].background }]}>
           <ThemedText style={styles.listText}>Explorar por lista</ThemedText>
