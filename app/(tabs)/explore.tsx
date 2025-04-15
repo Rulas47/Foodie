@@ -1,5 +1,5 @@
 import { StyleSheet, Dimensions, TextInput, View, TouchableOpacity } from 'react-native';
-import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import Constants from 'expo-constants';
@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { MaterialIcons } from '@expo/vector-icons';
 
 export default function TabTwoScreen() {
   const [activeView, setActiveView] = useState('map');
@@ -17,7 +16,6 @@ export default function TabTwoScreen() {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
-  const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const colorScheme = useColorScheme() ?? 'light';
 
   useEffect(() => {
@@ -29,7 +27,6 @@ export default function TabTwoScreen() {
       }
 
       let currentLocation = await Location.getCurrentPositionAsync({});
-      setUserLocation(currentLocation);
       setLocation({
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
@@ -88,22 +85,7 @@ export default function TabTwoScreen() {
           initialRegion={location}
           showsUserLocation={true}
           showsMyLocationButton={true}
-        >
-          {userLocation && (
-            <Marker
-              coordinate={{
-                latitude: userLocation.coords.latitude,
-                longitude: userLocation.coords.longitude,
-              }}
-              title="Tu ubicación"
-              description="Estás aquí"
-            >
-              <View style={styles.markerContainer}>
-                <MaterialIcons name="person-pin-circle" size={40} color="#00BFA5" />
-              </View>
-            </Marker>
-          )}
-        </MapView>
+        />
       ) : (
         <View style={[styles.listView, { backgroundColor: Colors[colorScheme].background }]}>
           <ThemedText style={styles.listText}>Explorar por lista</ThemedText>
@@ -174,9 +156,5 @@ const styles = StyleSheet.create({
   },
   listText: {
     fontSize: 20,
-  },
-  markerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 }); 
