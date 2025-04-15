@@ -25,6 +25,7 @@ export default function TabTwoScreen() {
     longitudeDelta: 0.0421,
   });
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [currentRegion, setCurrentRegion] = useState(location);
   const colorScheme = useColorScheme() ?? 'light';
 
   useEffect(() => {
@@ -36,17 +37,22 @@ export default function TabTwoScreen() {
       }
 
       let currentLocation = await Location.getCurrentPositionAsync({});
-      setLocation({
+      const newLocation = {
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
-      });
-      
-      // Buscar restaurantes cercanos
-      await fetchNearbyRestaurants(currentLocation.coords.latitude, currentLocation.coords.longitude);
+      };
+      setLocation(newLocation);
+      setCurrentRegion(newLocation);
+      await fetchNearbyRestaurants(newLocation.latitude, newLocation.longitude);
     })();
   }, []);
+
+  const handleRegionChangeComplete = async (region: any) => {
+    setCurrentRegion(region);
+    await fetchNearbyRestaurants(region.latitude, region.longitude);
+  };
 
   const fetchNearbyRestaurants = async (lat: number, lng: number) => {
     try {
@@ -118,6 +124,8 @@ export default function TabTwoScreen() {
           provider={PROVIDER_GOOGLE}
           style={styles.map}
           initialRegion={location}
+          region={currentRegion}
+          onRegionChangeComplete={handleRegionChangeComplete}
           showsUserLocation={true}
           showsMyLocationButton={true}
           showsPointsOfInterest={false}
