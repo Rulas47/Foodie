@@ -1,4 +1,4 @@
-import { StyleSheet, Dimensions, TextInput, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Dimensions, TextInput, View, TouchableOpacity, FlatList } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -15,6 +15,18 @@ interface Restaurant {
   longitude: number;
   rating?: number;
 }
+
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371; // Radio de la Tierra en kilómetros
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
 
 export default function TabTwoScreen() {
   const [activeView, setActiveView] = useState('map');
@@ -167,7 +179,39 @@ export default function TabTwoScreen() {
         </MapView>
       ) : (
         <View style={[styles.listView, { backgroundColor: Colors[colorScheme].background }]}>
-          <ThemedText style={styles.listText}>Explorar por lista</ThemedText>
+          <FlatList
+            data={restaurants
+              .map(restaurant => ({
+                ...restaurant,
+                distance: calculateDistance(
+                  location.latitude,
+                  location.longitude,
+                  restaurant.latitude,
+                  restaurant.longitude
+                )
+              }))
+              .sort((a, b) => a.distance - b.distance)}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={[styles.restaurantItem, { 
+                backgroundColor: colorScheme === 'light' ? '#f5f5f5' : '#2a2a2a',
+                borderColor: colorScheme === 'light' ? '#ddd' : '#444'
+              }]}>
+                <ThemedText style={styles.restaurantName}>{item.name}</ThemedText>
+                <View style={styles.restaurantInfo}>
+                  <ThemedText style={styles.restaurantDistance}>
+                    {item.distance.toFixed(1)} km
+                  </ThemedText>
+                  {item.rating && (
+                    <ThemedText style={styles.restaurantRating}>
+                      ⭐ {item.rating.toFixed(1)}
+                    </ThemedText>
+                  )}
+                </View>
+              </View>
+            )}
+            contentContainerStyle={styles.listContainer}
+          />
         </View>
       )}
     </ThemedView>
@@ -230,10 +274,31 @@ const styles = StyleSheet.create({
   },
   listView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  listText: {
-    fontSize: 20,
+  listContainer: {
+    padding: 10,
+  },
+  restaurantItem: {
+    padding: 15,
+    marginBottom: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  restaurantName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  restaurantInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  restaurantDistance: {
+    fontSize: 14,
+    color: '#666',
+  },
+  restaurantRating: {
+    fontSize: 14,
+    color: '#FFD700',
   },
 }); 
