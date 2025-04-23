@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { router } from 'expo-router';
 
 interface Restaurant {
   id: string;
@@ -26,6 +27,19 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     Math.sin(dLon/2) * Math.sin(dLon/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
+};
+
+const fetchRestaurantDetails = async (placeId: string) => {
+  try {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,website,rating,price_level&key=AIzaSyCUotSSvr4PyrHMeUS0v40gCBtqQmnmrmU`
+    );
+    const data = await response.json();
+    return data.result;
+  } catch (error) {
+    console.error('Error fetching restaurant details:', error);
+    return null;
+  }
 };
 
 export default function TabTwoScreen() {
@@ -193,10 +207,28 @@ export default function TabTwoScreen() {
               .sort((a, b) => a.distance - b.distance)}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <View style={[styles.restaurantItem, { 
-                backgroundColor: colorScheme === 'light' ? '#f5f5f5' : '#2a2a2a',
-                borderColor: colorScheme === 'light' ? '#ddd' : '#444'
-              }]}>
+              <TouchableOpacity 
+                style={[styles.restaurantItem, { 
+                  backgroundColor: colorScheme === 'light' ? '#f5f5f5' : '#2a2a2a',
+                  borderColor: colorScheme === 'light' ? '#ddd' : '#444'
+                }]}
+                onPress={async () => {
+                  const details = await fetchRestaurantDetails(item.id);
+                  if (details) {
+                    router.push({
+                      pathname: '/restaurant-details',
+                      params: {
+                        name: details.name,
+                        address: details.formatted_address,
+                        rating: details.rating,
+                        priceLevel: details.price_level,
+                        phone: details.formatted_phone_number,
+                        website: details.website
+                      }
+                    });
+                  }
+                }}
+              >
                 <ThemedText style={styles.restaurantName}>{item.name}</ThemedText>
                 <View style={styles.restaurantInfo}>
                   <ThemedText style={styles.restaurantDistance}>
@@ -208,7 +240,7 @@ export default function TabTwoScreen() {
                     </ThemedText>
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
             contentContainerStyle={styles.listContainer}
           />
