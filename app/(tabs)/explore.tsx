@@ -8,6 +8,7 @@ import * as Location from 'expo-location';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { router } from 'expo-router';
+import { GOOGLE_MAPS_API_KEY } from '@/config/api';
 
 interface Restaurant {
   id: string;
@@ -32,7 +33,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 const fetchRestaurantDetails = async (placeId: string) => {
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,website,rating,price_level&key=AIzaSyCUotSSvr4PyrHMeUS0v40gCBtqQmnmrmU`
+      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,website,rating,price_level&key=${GOOGLE_MAPS_API_KEY}`
     );
     const data = await response.json();
     return data.result;
@@ -83,7 +84,7 @@ export default function TabTwoScreen() {
   const fetchNearbyRestaurants = async (lat: number, lng: number) => {
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=1500&type=restaurant&key=AIzaSyCUotSSvr4PyrHMeUS0v40gCBtqQmnmrmU`
+        `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=1500&type=restaurant&key=${GOOGLE_MAPS_API_KEY}`
       );
       const data = await response.json();
       
