@@ -1,4 +1,4 @@
-import { StyleSheet, Dimensions, TextInput, View, TouchableOpacity, FlatList } from 'react-native';
+import { StyleSheet, Dimensions, TextInput, View, TouchableOpacity, FlatList, Animated } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -45,6 +45,7 @@ const fetchRestaurantDetails = async (placeId: string) => {
 
 export default function TabTwoScreen() {
   const [activeView, setActiveView] = useState('map');
+  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [location, setLocation] = useState({
     latitude: 40.416775,
     longitude: -3.703790,
@@ -147,51 +148,82 @@ export default function TabTwoScreen() {
         </View>
       </View>
       {activeView === 'map' ? (
-        <MapView
-          provider={PROVIDER_GOOGLE}
-          style={styles.map}
-          initialRegion={location}
-          region={currentRegion}
-          onRegionChangeComplete={handleRegionChangeComplete}
-          showsUserLocation={true}
-          showsMyLocationButton={true}
-          showsPointsOfInterest={false}
-          showsBuildings={false}
-          showsTraffic={false}
-          showsIndoors={false}
-          showsCompass={false}
-          showsScale={false}
-          customMapStyle={[
-            {
-              featureType: "poi",
-              elementType: "labels",
-              stylers: [{ visibility: "off" }]
-            },
-            {
-              featureType: "poi",
-              elementType: "geometry",
-              stylers: [{ visibility: "off" }]
-            },
-            {
-              featureType: "poi.business",
-              elementType: "all",
-              stylers: [{ visibility: "on" }]
-            }
-          ]}
-        >
-          {restaurants.map((restaurant) => (
-            <Marker
-              key={restaurant.id}
-              coordinate={{
-                latitude: restaurant.latitude,
-                longitude: restaurant.longitude,
-              }}
-              title={restaurant.name}
-              description={`Rating: ${restaurant.rating || 'No disponible'}`}
-              pinColor="#FF0000"
-            />
-          ))}
-        </MapView>
+        <View style={styles.mapContainer}>
+          <MapView
+            provider={PROVIDER_GOOGLE}
+            style={styles.map}
+            initialRegion={location}
+            region={currentRegion}
+            onRegionChangeComplete={handleRegionChangeComplete}
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+            showsPointsOfInterest={false}
+            showsBuildings={false}
+            showsTraffic={false}
+            showsIndoors={false}
+            showsCompass={false}
+            showsScale={false}
+            customMapStyle={[
+              {
+                featureType: "poi",
+                elementType: "labels",
+                stylers: [{ visibility: "off" }]
+              },
+              {
+                featureType: "poi",
+                elementType: "geometry",
+                stylers: [{ visibility: "off" }]
+              },
+              {
+                featureType: "poi.business",
+                elementType: "all",
+                stylers: [{ visibility: "on" }]
+              }
+            ]}
+          >
+            {restaurants.map((restaurant) => (
+              <Marker
+                key={restaurant.id}
+                coordinate={{
+                  latitude: restaurant.latitude,
+                  longitude: restaurant.longitude,
+                }}
+                title={restaurant.name}
+                description={`Rating: ${restaurant.rating || 'No disponible'}`}
+                pinColor="#FF0000"
+                onPress={() => setSelectedRestaurant(restaurant)}
+              />
+            ))}
+          </MapView>
+          {selectedRestaurant && (
+            <View style={[styles.infoCard, { backgroundColor: Colors[colorScheme].background }]}>
+              <TouchableOpacity 
+                style={styles.infoCardContent}
+                onPress={async () => {
+                  const details = await fetchRestaurantDetails(selectedRestaurant.id);
+                  if (details) {
+                    router.push({
+                      pathname: '/restaurant-details',
+                      params: {
+                        name: details.name,
+                        address: details.formatted_address,
+                        rating: details.rating,
+                        priceLevel: details.price_level,
+                        phone: details.formatted_phone_number,
+                        website: details.website
+                      }
+                    });
+                  }
+                }}
+              >
+                <ThemedText style={styles.infoCardTitle}>{selectedRestaurant.name}</ThemedText>
+                {selectedRestaurant.rating && (
+                  <ThemedText style={styles.infoCardRating}>⭐ {selectedRestaurant.rating.toFixed(1)}</ThemedText>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       ) : (
         <View style={[styles.listView, { backgroundColor: Colors[colorScheme].background }]}>
           <FlatList
@@ -333,5 +365,40 @@ const styles = StyleSheet.create({
   restaurantRating: {
     fontSize: 14,
     color: '#FFD700',
+  },
+  mapContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  infoCard: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    borderRadius: 12,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  infoCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  infoCardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  infoCardRating: {
+    fontSize: 14,
+    color: '#FFD700',
+    marginLeft: 10,
   },
 }); 
