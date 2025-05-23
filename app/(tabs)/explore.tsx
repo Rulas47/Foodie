@@ -46,6 +46,8 @@ const fetchRestaurantDetails = async (placeId: string) => {
 export default function TabTwoScreen() {
   const [activeView, setActiveView] = useState('map');
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredRestaurants, setFilteredRestaurants] = useState<Restaurant[]>([]);
   const [location, setLocation] = useState({
     latitude: 40.416775,
     longitude: -3.703790,
@@ -76,6 +78,13 @@ export default function TabTwoScreen() {
       await fetchNearbyRestaurants(newLocation.latitude, newLocation.longitude);
     })();
   }, []);
+
+  useEffect(() => {
+    const filtered = restaurants.filter(restaurant =>
+      restaurant.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredRestaurants(filtered);
+  }, [searchQuery, restaurants]);
 
   const handleRegionChangeComplete = async (region: any) => {
     setCurrentRegion(region);
@@ -114,8 +123,10 @@ export default function TabTwoScreen() {
               backgroundColor: colorScheme === 'light' ? '#f5f5f5' : '#2a2a2a',
               color: Colors[colorScheme].text 
             }]}
-            placeholder="Buscar"
+            placeholder="Buscar restaurantes..."
             placeholderTextColor={Colors[colorScheme].icon}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
         </View>
         <View style={[styles.buttonContainer, { backgroundColor: colorScheme === 'light' ? '#f5f5f5' : '#2a2a2a' }]}>
@@ -181,7 +192,7 @@ export default function TabTwoScreen() {
               }
             ]}
           >
-            {restaurants.map((restaurant) => (
+            {filteredRestaurants.map((restaurant) => (
               <Marker
                 key={restaurant.id}
                 coordinate={{
@@ -227,7 +238,7 @@ export default function TabTwoScreen() {
       ) : (
         <View style={[styles.listView, { backgroundColor: Colors[colorScheme].background }]}>
           <FlatList
-            data={restaurants
+            data={filteredRestaurants
               .map(restaurant => ({
                 ...restaurant,
                 distance: calculateDistance(
