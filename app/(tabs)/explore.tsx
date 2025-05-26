@@ -84,6 +84,32 @@ export default function TabTwoScreen() {
       restaurant.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredRestaurants(filtered);
+
+    // Centrar el mapa en el restaurante más cercano si hay resultados
+    if (filtered.length > 0 && searchQuery.trim() !== '') {
+      const closestRestaurant = filtered.reduce((closest, current) => {
+        const closestDistance = calculateDistance(
+          location.latitude,
+          location.longitude,
+          closest.latitude,
+          closest.longitude
+        );
+        const currentDistance = calculateDistance(
+          location.latitude,
+          location.longitude,
+          current.latitude,
+          current.longitude
+        );
+        return currentDistance < closestDistance ? current : closest;
+      });
+
+      setCurrentRegion({
+        latitude: closestRestaurant.latitude,
+        longitude: closestRestaurant.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+    }
   }, [searchQuery, restaurants]);
 
   const handleRegionChangeComplete = async (region: any) => {
