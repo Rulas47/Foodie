@@ -1,14 +1,63 @@
-import { StyleSheet, View, TouchableOpacity, Linking, Dimensions } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Linking, Dimensions, Alert, Modal } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useState, useEffect } from 'react';
+import { saveRestaurant, getRestaurants, SavedRestaurant, removeRestaurant } from '@/utils/storage';
 
 export default function RestaurantDetailsScreen() {
-  const { name, address, rating, phone, website } = useLocalSearchParams();
+  const { id, name, address, rating, phone, website } = useLocalSearchParams();
   const colorScheme = useColorScheme() ?? 'light';
+  const [isSaved, setIsSaved] = useState(false);
+  const [savedList, setSavedList] = useState<'favoritos' | 'pendientes' | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
+
+  useEffect(() => {
+    checkIfSaved();
+  }, []);
+
+  const checkIfSaved = async () => {
+    const favoritos = await getRestaurants('favoritos');
+    const pendientes = await getRestaurants('pendientes');
+    
+    const inFavoritos = favoritos.some(r => r.id === id);
+    const inPendientes = pendientes.some(r => r.id === id);
+    
+    setIsSaved(inFavoritos || inPendientes);
+    if (inFavoritos) setSavedList('favoritos');
+    else if (inPendientes) setSavedList('pendientes');
+  };
+
+  const handleSave = async (list: 'favoritos' | 'pendientes') => {
+    const restaurant: SavedRestaurant = {
+      id: id as string,
+      name: name as string,
+      address: address as string,
+      rating: rating ? Number(rating) : undefined,
+      phone: phone as string,
+      website: website as string,
+      list
+    };
+
+    await saveRestaurant(restaurant);
+    setIsSaved(true);
+    setSavedList(list);
+    setShowMenu(false);
+    Alert.alert('Éxito', `Restaurante guardado en ${list}`);
+  };
+
+  const handleRemove = async () => {
+    if (savedList) {
+      await removeRestaurant(id as string, savedList);
+      setIsSaved(false);
+      setSavedList(null);
+      setShowMenu(false);
+      Alert.alert('Éxito', 'Restaurante eliminado de la lista');
+    }
+  };
 
   const isDark = colorScheme === 'dark';
   const theme = {
@@ -33,6 +82,56 @@ export default function RestaurantDetailsScreen() {
     }
   };
 
+  const renderMenu = () => (
+    <Modal
+      visible={showMenu}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setShowMenu(false)}
+    >
+      <TouchableOpacity 
+        style={styles.menuOverlay}
+        activeOpacity={1}
+        onPress={() => setShowMenu(false)}
+      >
+        <View style={[styles.menuContainer, { backgroundColor: theme.card }]}>
+          {isSaved ? (
+            <TouchableOpacity 
+              style={[styles.menuItem, { borderBottomColor: theme.text + '20' }]}
+              onPress={handleRemove}
+            >
+              <IconSymbol name="trash" size={20} color="#FF4444" />
+              <ThemedText style={[styles.menuItemText, { color: '#FF4444' }]}>
+                Quitar de {savedList === 'favoritos' ? 'Favoritos' : 'Pendientes'}
+              </ThemedText>
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity 
+                style={[styles.menuItem, { borderBottomColor: theme.text + '20' }]}
+                onPress={() => handleSave('favoritos')}
+              >
+                <IconSymbol name="star" size={20} color="#FFD700" />
+                <ThemedText style={[styles.menuItemText, { color: theme.text }]}>
+                  Añadir a Favoritos
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => handleSave('pendientes')}
+              >
+                <IconSymbol name="clock" size={20} color="#00BFA5" />
+                <ThemedText style={[styles.menuItemText, { color: theme.text }]}>
+                  Añadir a Pendientes
+                </ThemedText>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen
@@ -41,9 +140,34 @@ export default function RestaurantDetailsScreen() {
           headerShown: true,
         }}
       />
+      {renderMenu()}
       <View style={styles.content}>
         <View style={[styles.section, { backgroundColor: theme.card }]}>
-          <ThemedText type="title" style={{ color: theme.text }}>{name}</ThemedText>
+          <View style={styles.headerContainer}>
+            <View style={styles.titleContainer}>
+              <ThemedText type="title" style={{ color: theme.text }}>{name}</ThemedText>
+              {savedList && (
+                <View style={[styles.savedBadge, { backgroundColor: savedList === 'favoritos' ? '#FFD700' : '#00BFA5' }]}>
+                  <ThemedText style={styles.savedText}>
+                    {savedList === 'favoritos' ? 'Favorito' : 'Pendiente'}
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity 
+              style={[
+                styles.saveButton,
+                { backgroundColor: isSaved ? (savedList === 'favoritos' ? '#FFD700' : '#00BFA5') : '#2196F3' }
+              ]} 
+              onPress={() => setShowMenu(true)}
+            >
+              <IconSymbol 
+                name={isSaved ? "checkmark" : "plus"} 
+                size={20} 
+                color="white" 
+              />
+            </TouchableOpacity>
+          </View>
           {rating && (
             <View style={[styles.ratingContainer, { backgroundColor: theme.ratingBg }]}>
               <IconSymbol name="star.fill" size={20} color="#FFD700" />
@@ -145,6 +269,75 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     color: 'white',
+    fontWeight: '500',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  titleContainer: {
+    flex: 1,
+    marginRight: 12,
+  },
+  saveButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 18,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  savedBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  savedText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 60,
+    paddingRight: 10,
+  },
+  menuContainer: {
+    width: 250,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  menuItemText: {
+    marginLeft: 12,
+    fontSize: 16,
     fontWeight: '500',
   },
 }); 

@@ -242,6 +242,7 @@ export default function TabTwoScreen() {
                     router.push({
                       pathname: '/restaurant-details',
                       params: {
+                        id: selectedRestaurant.id,
                         name: details.name,
                         address: details.formatted_address,
                         rating: details.rating,
@@ -288,6 +289,7 @@ export default function TabTwoScreen() {
                     router.push({
                       pathname: '/restaurant-details',
                       params: {
+                        id: item.id,
                         name: details.name,
                         address: details.formatted_address,
                         rating: details.rating,
